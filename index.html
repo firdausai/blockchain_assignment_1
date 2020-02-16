@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            .container {
+                margin: 5% 20% 0 20%;
+            }
+
+            .table-styling{
+                font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+                border-collapse: collapse;
+                width: 100%;
+            }
+            
+            .table-styling td, .table-styling th {
+                border: 1px solid #ddd;
+                padding: 8px;
+            }
+            
+            .table-styling tr:nth-child(even){background-color: #f2f2f2;}
+            
+            .table-styling tr:hover {background-color: #ddd;}
+            
+            .table-styling th {
+                padding-top: 12px;
+                padding-bottom: 12px;
+                text-align: left;
+                background-color: rgb(76, 119, 175);
+                color: white;
+            }
+
+            .user-input {
+                margin-bottom: 5%;
+            }
+
+            input[type=text] {
+                width: 100%;
+                padding: 12px 20px;
+                margin: 8px 0;
+                box-sizing: border-box;
+            }
+
+            .button {
+                background-color: rgb(76, 119, 175);
+                border: none;
+                color: white;
+                padding: 12px 20px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                cursor: pointer;
+            }
+
+            .message {
+                margin-bottom : 5%;
+                /* border: 1px solid black; */
+                padding: 5px 10px;
+                font-weight: bold;
+                color:white;
+            }
+
+            .success {
+                background-color: green;
+            }
+
+            .danger {
+                background-color: rgb(223, 27, 27);
+            }
+        </style>
+        <title>Blockchain System</title>
+    </head>
+    <body>
+        <div class = 'container'>
+            <div class = 'user-input'>
+                <form id = 'form'>
+                    <label>Input Name (Data)</label>
+                    <input type="text" id="todoUserInput">
+                    <button type = 'submit' class = 'button'>Add Data</button>
+                    <a><button type="button" class = 'button' id = 'checkBlockchain'>Check Blockchain</button></a>
+                </form>
+            </div>
+            <div class = 'message' id = 'message'></div>
+            <div class = 'message' id = 'status'></div>
+            Scroll left-right to see content
+            <div class="display" style = 'overflow-x: auto;'>
+                <table class = 'table-styling' id = 'display'>
+                </table>
+            </div>
+        </div>
+        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+        <script>
+            $(document).ready(() => {
+                const display = $('#display');
+                const form = $('#form');
+                const todoUserInput = $('#todoUserInput');
+                const message = $('#message');
+                const status = $('#status');
+
+                $( "#checkBlockchain" ).click(function() {
+                    checkBlock();
+                    // $('table').remove('tr');
+                    $('tr').remove();
+                    getBlocks();
+                });
+
+                const displayMessage = (flag) => {
+                    if (flag) {
+                        message.removeClass('danger');
+                        message.addClass('success');
+                        message.html('Input Success');
+                        message.show();
+                    } else {
+                        message.removeClass('success');
+                        message.addClass('danger');
+                        message.html('Input Error');
+                        message.show();
+                    }
+                }
+
+                const displayStatus = (flag) => {
+                    console.log('status : ' + flag);
+                    if (flag.status) {
+                        status.removeClass('danger');
+                        status.addClass('success');
+                        status.html('Blockchain Valid');
+                        status.show();
+                    } else {
+                        status.removeClass('success');
+                        status.addClass('danger');
+                        status.html(`Blockchain Invalid starting at index ${flag.index}`);
+                        status.show();
+                    }
+                }
+
+                const getBlocks = () => {
+                    fetch('/getBlock',{method : 'get'}).then((response) => {
+                        // console.log(response.json());
+                        return response.json();
+                    }).then((data) => {
+                        console.log(data);
+                        displayBlocks(data);
+                    });
+                }
+
+                const checkBlock = () => {
+                    fetch('/validateChain',{method : 'get'}).then((response) => {
+                        // console.log(response.json());
+                        return response.json();
+                    }).then((data) => {
+                        console.log(data);
+                        displayStatus(data)
+                    });
+                }
+
+                getBlocks();
+                checkBlock();
+
+                const buildIDS = (block) => {
+                    return {
+                        editID : 'edit_' + block._id,
+                        deleteID : 'delete_' + block._id,
+                        listItemID : 'listItem_' + block._id,
+                        todoID : 'todo_' + block._id
+                    }
+                }
+
+                const displayBlocks = (data) => {
+                    display.append('<tr><th>Index</th><th>Name (Data)</th><th>Timestamp</th><th>Prev Hash</th><th>Hash</th></tr>');
+                    data.forEach((block) => {
+                        let ids = buildIDS(block);
+                        display.append(buildTemplate(block,ids));
+                    });
+                }
+
+                const resetTodosInput = () => {
+                    todoUserInput.val('');
+                }
+
+                const buildTemplate = (block,ids) => {
+                    return `<tr id = ${ids.listItemID}>
+                        <td>${block.index}</td>
+                        <td>${block.name}</td>
+                        <td>${block.timestamp}</td>
+                        <td>${block.prevHash}</td>
+                        <td>${block.hash}</td>
+                        </tr>`;
+                }
+
+                form.submit((e) => {
+                    e.preventDefault();
+                    // console.log(todoUserInput.val());
+                    fetch('/',{
+                        method: 'post',
+                        body : JSON.stringify({index : null, name : todoUserInput.val(), timestamp: null, prevHash: null, hash: null}),
+                        headers: {
+                            'Content-Type' : 'application/json; charset=utf-8'
+                        }
+                    }).then((response) => {
+                        return response.json();
+                    }).then((data) => {
+                        if(!data.error) {
+                            if(data.result.ok == 1 && data.result.n == 1) {
+                                let ids = buildIDS(data.document);
+                                display.append(buildTemplate(data.document,ids));
+                                displayMessage(true);
+                            } 
+                        } else {
+                            displayMessage(false);
+                            // console.log(data.error);
+                        }
+
+                        resetTodosInput();
+                    });
+                });
+
+            });
+        </script>
+    </body>
+</html>
